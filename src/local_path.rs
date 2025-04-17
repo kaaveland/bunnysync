@@ -44,3 +44,17 @@ fn discover_files(root: &str) -> anyhow::Result<FxHashSet<PathBuf>> {
         Err(anyhow!("{root} is not a directory"))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn files_by_remote_name_smoketest() {
+        let files = files_by_remote_name("src", "sources").unwrap();
+        assert_eq!(
+            files.get("sources/main.rs"),
+            Some(&PathBuf::new().join("src").join("main.rs"))
+        );
+    }
+}

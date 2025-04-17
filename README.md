@@ -21,22 +21,22 @@ I made this tool to facilitate quick and easy sync from multiple repositories/st
 Place each file from the local `~/projects/blog/public` folder into the root of the storage zone named `eugene-docs`:
 
 ```shell
-bunnysync ~/projects/blog/public eugene-docs
+bunnysync sync ~/projects/blog/public eugene-docs
 ```
 
 Place each file from the local `~/projects/eugene/eugene/docs/book` folder into the eugene/ folder on the storage zone named `eugene-docs`:
 
 ```shell
-bunnysync ~/projects/blog/public eugene-docs --path eugene
+bunnysync sync ~/projects/blog/public eugene-docs --path eugene
 ```
 
 Place each file from the local `~/projects/blog/public` folder into the root of the storage zone named `eugene-docs` but do not delete anything under `eugene/`:
 
 ```shell
-bunnysync ~/projects/blog/public eugene-docs --ignore eugene
+bunnysync sync ~/projects/blog/public eugene-docs --ignore eugene
 ```
 
-For more, see `bunnysync -h`:
+For more, see `bunnysync --help`:
 
 ```
 bunnysync is a tool for synchronizing files to bunny cdn storage zones
@@ -51,51 +51,22 @@ control.
 bunnysync aims to make the local_path and the path within the storage zone exactly equal. It will sync
 HTML at the end, to ensure other assets like CSS are already updated by the time they sync.
 
-Usage: bunnysync [OPTIONS] <local_path> <storage_zone>
+Usage: bunnysync <COMMAND>
 
-Arguments:
-  <local_path>
-          Local directory to put in the storage zone
-
-  <storage_zone>
-          Which storage zone to sync to
+Commands:
+  sync         Sync a local folder to a path within a bunny.net Storage Zone
+  completions  Provide shell completions
+  purge-url    Purge a URL from the bunny.net cache
+  purge-zone   Purge an entire pull zone from bunny.net cache
+  help         Print this message or the help of the given subcommand(s)
 
 Options:
-  -e, --endpoint <ENDPOINT>
-          Which bunny cdn endpoint to use
-
-          [default: storage.bunnycdn.com]
-
-  -a, --access-key <ACCESS_KEY>
-          Password for the storage zone - looked up in environment variable BUNNYSYNC_KEY if not present
-
-  -p, --path <PATH>
-          Path inside the storage zone to sync to, path to a directory
-
-          [default: /]
-
-      --dry-run
-          Don't actually sync, just show what would change
-
-  -f, --force
-          Force a sync despite a hanging lock file
-
-      --lockfile <LOCKFILE>
-          Filename to use for the lockfile. bunnysync will not sync if this file exists in the destination
-
-          [default: .bunnysync.lock]
-
-  -i, --ignore <IGNORE>
-          Do not delete anything in the storage zone paths that start with this prefix (can pass multiple times)
-
-  -v, --verbose
-
-
   -h, --help
           Print help (see a summary with '-h')
 
   -V, --version
           Print version
+
 ```
 
 ## Development

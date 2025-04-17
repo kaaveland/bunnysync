@@ -17,30 +17,21 @@ pub struct FileMeta {
     pub checksum: Option<[u8; 32]>,
 }
 
-pub struct ApiClient<'a> {
+#[derive(Clone)]
+pub struct StorageZoneClient {
     client: Client,
-    access_key: &'a str,
-    endpoint: &'a str,
-    storage_zone: &'a str,
-    dry_run: bool,
-    verbose: bool,
+    access_key: String,
+    endpoint: String,
+    storage_zone: String,
 }
 
-impl<'a> ApiClient<'a> {
-    pub fn new(
-        access_key: &'a str,
-        endpoint: &'a str,
-        storage_zone: &'a str,
-        dry_run: bool,
-        verbose: bool,
-    ) -> Self {
-        ApiClient {
+impl StorageZoneClient {
+    pub fn new(access_key: String, endpoint: String, storage_zone: String) -> Self {
+        StorageZoneClient {
             client: Client::new(),
             access_key,
             endpoint,
             storage_zone,
-            dry_run,
-            verbose,
         }
     }
 
@@ -48,7 +39,7 @@ impl<'a> ApiClient<'a> {
         let response = self
             .client
             .get(self.url_for(path))
-            .header("AccessKey", self.access_key)
+            .header("AccessKey", self.access_key.as_str())
             .send()?;
         if response.status().is_success() {
             Ok(response.text()?)
@@ -61,11 +52,11 @@ impl<'a> ApiClient<'a> {
         format!("https://{}/{}/{path}", self.endpoint, self.storage_zone)
     }
 
-    fn discover_files(&self, path: &str) -> anyhow::Result<Vec<FileInfo>> {
+    fn discover_files(&self, path: &str, skip: &[String]) -> anyhow::Result<Vec<FileInfo>> {
         let response = self
             .client
             .get(self.url_for(path))
-            .header("AccessKey", self.access_key)
+            .header("AccessKey", self.access_key.as_str())
             .send()?;
         let mut files: Vec<FileInfo> = response.json()?;
         let mut extra = vec![];
@@ -74,21 +65,21 @@ impl<'a> ApiClient<'a> {
             .filter(|fi| fi.is_directory)
             .collect::<Vec<_>>()
         {
-            extra.extend(
-                self.discover_files(
-                    format!("{path}{}/", dir.object_name)
-                        .as_str()
-                        .trim_start_matches("/"),
-                )?,
-            );
+            let next = format!("{path}{}/", dir.object_name);
+            let next = next.trim_start_matches("/");
+            if !skip.iter().any(|skip| next.starts_with(skip)) {
+                extra.extend(
+                    self.discover_files(next, skip)?
+                );
+            }
         }
         files.extend(extra);
         files.retain(|fi| !fi.is_directory);
         Ok(files)
     }
 
-    pub fn list_files(&self, path: &str) -> anyhow::Result<FxHashMap<String, FileMeta>> {
-        let files = self.discover_files(path)?;
+    pub fn list_files(&self, path: &str, skip: &[String]) -> anyhow::Result<FxHashMap<String, FileMeta>> {
+        let files = self.discover_files(path, skip)?;
         let mut files_by_name = FxHashMap::default();
         let trim_prefix = format!("/{}/", self.storage_zone);
         for fi in files {
@@ -113,54 +104,38 @@ impl<'a> ApiClient<'a> {
     }
 
     pub fn put_file(
-        &'a self,
+        &self,
         path: &str,
         body: Vec<u8>,
         content_type: Option<&str>,
     ) -> anyhow::Result<()> {
-        if self.verbose || self.dry_run {
-            println!("{path}: put");
-        }
+        let url = self.url_for(path);
 
-        if !self.dry_run {
-            let url = self.url_for(path);
+        let response = self
+            .client
+            .put(url)
+            .header("AccessKey", self.access_key.as_str())
+            .header(
+                "Content-Type",
+                content_type.unwrap_or("application/octet-stream"),
+            )
+            .body(body)
+            .send()?;
 
-            let response = self
-                .client
-                .put(url)
-                .header("AccessKey", self.access_key)
-                .header(
-                    "Content-Type",
-                    content_type.unwrap_or("application/octet-stream"),
-                )
-                .body(body)
-                .send()?;
-
-            if response.status().is_success() {
-                Ok(())
-            } else {
-                Err(anyhow!("Request failed: {:?}", response.status()))
-            }
-        } else {
+        if response.status().is_success() {
             Ok(())
+        } else {
+            Err(anyhow!("Request failed: {:?}", response.status()))
         }
     }
 
     pub fn delete_file(&self, path: &str) -> anyhow::Result<()> {
-        if self.verbose || self.dry_run {
-            println!("{path}: delete");
-        }
-
-        if !self.dry_run {
-            let response = self
-                .client
-                .delete(self.url_for(path))
-                .header("AccessKey", self.access_key)
-                .send()?;
-            Ok(response.error_for_status().map(|_| ())?)
-        } else {
-            Ok(())
-        }
+        let response = self
+            .client
+            .delete(self.url_for(path))
+            .header("AccessKey", self.access_key.as_str())
+            .send()?;
+        Ok(response.error_for_status().map(|_| ())?)
     }
 }
 
