@@ -152,8 +152,7 @@ mod tests {
     fn replaces_when_checksum_mismatch() {
         let content_remote = "hei";
         let remote_checksum: [u8; 32] = Sha256::digest(content_remote.as_bytes())
-            .try_into()
-            .unwrap();
+            .into();
         let local_content = "hallois";
         let local = PathBuf::new().join("README.md");
         let plan = SyncPlan::Replace {
@@ -176,8 +175,7 @@ mod tests {
     fn ignores_when_checksum_match() {
         let content_remote = "hei";
         let remote_checksum: [u8; 32] = Sha256::digest(content_remote.as_bytes())
-            .try_into()
-            .unwrap();
+            .into();
         let local_content = "hei";
         let local = PathBuf::new().join("README.md");
         let plan = SyncPlan::Replace {
