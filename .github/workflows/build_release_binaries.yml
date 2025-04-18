@@ -1,0 +1,119 @@
+name: Upload release to GitHub
+
+on:
+  push:
+    tags:
+      - '*.*.*'
+    branches:
+      - main
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  create_release:
+    if: false
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify that tag matches Cargo.toml version
+        run: |
+          version="$(cargo read-manifest --manifest-path=Cargo.toml | jq -r .version)"
+          tag="$(echo ${{ github.ref }} | sed 's/refs\/tags\///')"
+          if [ "$tag" != "$version" ]; then
+            echo "Tag $tag does not match Cargo.toml version $version"
+            exit 1
+          fi
+      - name: Create release
+        run: |
+          version="$(cargo read-manifest --manifest-path=Cargo.toml | jq -r .version)"
+          echo "Creating release $version"
+          gh release create $version -t $version --generate-notes -d
+  upload_source_to_release:
+    needs:
+      - create_release
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Upload source code
+        run: |
+          version="$(cargo read-manifest --manifest-path=Cargo.toml | jq -r .version)"
+          tar czf bunnysync-$version-sources.tar.gz Cargo.toml Cargo.lock src/
+          #gh release upload "$version" bunnysync-$version-sources.tar.gz
+  build_release:
+    runs-on: ${{ matrix.target.runs-on }}
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - toolchain: x86_64-unknown-linux-musl
+            runs-on: ubuntu-latest
+            cargo: cross
+            suffix: ""
+          - toolchain: aarch64-unknown-linux-musl
+            runs-on: ubuntu-latest
+            cargo: cross
+            suffix: ""
+          - toolchain: x86_64-apple-darwin
+            runs-on: macos-latest
+            cargo: cargo
+            suffix: ""
+          - toolchain: aarch64-apple-darwin
+            runs-on: macos-latest
+            cargo: cargo
+            suffix: ""
+          - toolchain: x86_64-pc-windows-gnu
+            runs-on: windows-latest
+            cargo: cargo
+            suffix: ".exe"
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Rust toolchain for ${{ matrix.target.toolchain }}
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target.toolchain }}
+      - uses: cargo-bins/cargo-binstall@main
+        if: ${{ matrix.target.cargo == 'cross' }}
+      - name: Install cross
+        if: ${{ matrix.target.cargo == 'cross' }}
+        run: cargo binstall -y --force cross
+      - name: build release
+        run: ${{ matrix.target.cargo }} build --release --target "${{ matrix.target.toolchain }}"
+      - name: rename release
+        shell: bash
+        run: |
+          version="$(cargo read-manifest --manifest-path=Cargo.toml | jq -r .version)"
+          bin_name=bunnysync-${{ matrix.target.toolchain }}${{ matrix.target.suffix }}
+          mv target/${{ matrix.target.toolchain }}/release/bunnysync${{ matrix.target.suffix }} $bin_name
+          if [[ "${{ matrix.target.runs-on }}" == "macos-latest" ]]; then
+            shasum -a 256 $bin_name > $bin_name.sha256
+          elif [[ "${{ matrix.target.runs-on }}" == "windows-latest" ]]; then
+            hash=$(certutil -hashfile $bin_name SHA256 | awk 'NR==2')
+            echo "$hash  $bin_name" > $bin_name.sha256
+          else
+            sha256sum $bin_name > $bin_name.sha256
+          fi
+          #gh release upload "$version" $bin_name $bin_name.sha256
+
+  publish_release:
+    if: false
+    runs-on: ubuntu-latest
+    needs:
+      - build_release
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Publish release
+        run: |
+          version="$(cargo read-manifest --manifest-path Cargo.toml | jq -r .version)"
+          gh release edit "$version" --draft=false

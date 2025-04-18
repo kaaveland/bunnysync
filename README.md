@@ -94,7 +94,8 @@ bunnysync is available under the MIT license, and contributions are welcome. Fee
 
 ## Planned work
 
-- Concurrent uploads
-- Progress indicator
-- Cleaning up empty folders in the target
-- Add subcommand to purge pull zone
+- Concurrent uploads 🤔
+- Progress indicator 🤔
+- Cleaning up empty folders in the target 🤔
+- Add subcommand to purge pull zone ✅
+- Add subcommand to purge url ✅
