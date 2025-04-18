@@ -1,0 +1,29 @@
+name: Release to crates.io from main
+
+on:
+  push:
+    tags:
+      - '*.*.*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify that Cargo.toml version matches tag
+        run: |
+          version="$(cargo read-manifest --manifest-path=Cargo.toml | jq -r .version)"
+          tag="$(echo ${{ github.ref }} | sed 's/refs\/tags\///')"
+          if [ "$tag" != "$version" ]; then
+            echo "Tag $tag does not match Cargo.toml version $version"
+            exit 1
+          fi
+      - name: Package for crates.io
+        run: cargo package
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+      - name: Publish to crates.io
+        run: cargo publish
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
