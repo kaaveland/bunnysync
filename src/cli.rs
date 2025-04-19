@@ -89,7 +89,7 @@ pub struct SyncArgs {
     pub ignore: Vec<String>,
     #[arg(short, long, default_value_t = false)]
     pub verbose: bool,
-    /// Use this many concurrent threads when listing files and syncing
+    /// Number of threads to use when calling bunny.net API (default to number of cpus)
     #[arg(short, long)]
     pub concurrency: Option<usize>,
 }

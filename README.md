@@ -12,6 +12,7 @@ I made this tool to facilitate quick and easy sync from multiple repositories/st
 - Skip deleting in subtrees to easily facilitate many sites in different trees
 - Rudimentary concurrency control by placing a lockfile in the storage zone to prevent concurrent deploys
 - Dry runs and verbose output
+- Concurrent requests to bunny.net API for both file listing and uploads
 - Syncs html files last, so that other assets are present before they change
 
 ## Usage
