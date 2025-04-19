@@ -1,4 +1,6 @@
 use anyhow::anyhow;
+use crossbeam::channel::unbounded;
+use crossbeam::thread;
 use fxhash::FxHashMap;
 use reqwest::blocking::Client;
 use serde::Deserialize;
@@ -52,34 +54,87 @@ impl StorageZoneClient {
         format!("https://{}/{}/{path}", self.endpoint, self.storage_zone)
     }
 
-    fn discover_files(&self, path: &str, skip: &[String]) -> anyhow::Result<Vec<FileInfo>> {
+    fn ls_dir(&self, path: &str) -> anyhow::Result<Vec<FileInfo>> {
         let response = self
             .client
             .get(self.url_for(path))
             .header("AccessKey", self.access_key.as_str())
             .send()?;
-        let mut files: Vec<FileInfo> = response.json()?;
-        let mut extra = vec![];
-        for dir in files
-            .iter()
-            .filter(|fi| fi.is_directory)
-            .collect::<Vec<_>>()
-        {
-            let next = format!("{path}{}/", dir.object_name);
-            let next = next.trim_start_matches("/");
-            if !skip.iter().any(|skip| next.starts_with(skip)) {
-                extra.extend(
-                    self.discover_files(next, skip)?
-                );
-            }
-        }
-        files.extend(extra);
-        files.retain(|fi| !fi.is_directory);
-        Ok(files)
+        Ok(response.json()?)
     }
 
-    pub fn list_files(&self, path: &str, skip: &[String]) -> anyhow::Result<FxHashMap<String, FileMeta>> {
-        let files = self.discover_files(path, skip)?;
+    fn concurrent_discover_files(
+        &self,
+        path: &str,
+        skip: &[String],
+        concurrency: usize,
+    ) -> anyhow::Result<Vec<FileInfo>> {
+        let (post_work, receive_work) = unbounded();
+        let (post_result, receive_result) = unbounded();
+
+        post_work.send(path.to_string())?;
+
+        let r = thread::scope(|scope| {
+            let mut files = vec![];
+
+            // Spawn workers
+            let mut workers = Vec::with_capacity(concurrency);
+            for _ in 0..concurrency {
+                let receive_work = receive_work.clone();
+                let send_result = post_result.clone();
+                workers.push(scope.spawn(move |_| {
+                    while let Ok(path) = receive_work.recv() {
+                        send_result.send(self.ls_dir(path.as_str()))?;
+                    }
+                    // Channel closed
+                    Ok::<(), anyhow::Error>(())
+                }));
+            }
+
+            let global_prefix = format!("/{}/", self.storage_zone);
+            let mut responses_needed = 1;
+
+            while responses_needed > 0 {
+                let new = receive_result.recv()??;
+                responses_needed -= 1;
+                for child in new {
+                    if child.is_directory {
+                        let subtree = format!(
+                            "{}/{}/",
+                            child
+                                .path
+                                .trim_start_matches(global_prefix.as_str())
+                                .trim_end_matches('/'),
+                            child.object_name.as_str()
+                        );
+                        if skip.iter().any(|skip| subtree.starts_with(skip)) {
+                            continue;
+                        }
+                        responses_needed += 1;
+                        post_work.send(subtree)?;
+                    } else {
+                        files.push(child);
+                    }
+                }
+            }
+            // Close channel to shut down workers
+            drop(post_work);
+            Ok::<Vec<_>, anyhow::Error>(files)
+        });
+
+        match r {
+            Ok(v) => Ok(v?),
+            Err(e) => Err(anyhow!("Thread err: {e:?}")),
+        }
+    }
+
+    pub fn list_files(
+        &self,
+        path: &str,
+        skip: &[String],
+        concurrency: usize,
+    ) -> anyhow::Result<FxHashMap<String, FileMeta>> {
+        let files = self.concurrent_discover_files(path, skip, concurrency)?;
         let mut files_by_name = FxHashMap::default();
         let trim_prefix = format!("/{}/", self.storage_zone);
         for fi in files {

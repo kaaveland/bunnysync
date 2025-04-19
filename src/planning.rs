@@ -17,33 +17,33 @@ fn must_remove<'a>(
         .collect()
 }
 
-#[derive(Debug, PartialEq, Eq)]
-pub enum SyncPlan<'a> {
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub enum SyncPlan {
     Put {
-        local: &'a PathBuf,
-        remote: &'a str,
+        local: PathBuf,
+        remote: String,
     },
     Replace {
-        local: &'a PathBuf,
-        remote: &'a str,
-        remote_checksum: Option<&'a [u8]>,
+        local: PathBuf,
+        remote: String,
+        remote_checksum: Option<[u8; 32]>,
     },
     Delete {
-        remote: &'a str,
+        remote: String,
     },
 }
 
 #[cfg(test)]
-impl<'a> SyncPlan<'a> {
-    fn remote(&self) -> &'a str {
+impl SyncPlan {
+    fn remote(&self) -> &str {
         match self {
-            SyncPlan::Put { local: _, remote } => remote,
+            SyncPlan::Put { local: _, remote } => remote.as_str(),
             SyncPlan::Replace {
                 local: _,
                 remote,
                 remote_checksum: _,
-            } => remote,
-            SyncPlan::Delete { remote } => remote,
+            } => remote.as_str(),
+            SyncPlan::Delete { remote } => remote.as_str(),
         }
     }
 }
@@ -67,7 +67,7 @@ pub fn plan_sync<'a>(
     local: &'a FxHashMap<String, PathBuf>,
     remote_content: &'a FxHashMap<String, FileMeta>,
     ignore: &[String],
-) -> Vec<SyncPlan<'a>> {
+) -> Vec<SyncPlan> {
     let mut job = Vec::with_capacity(local.len());
     let mut local_paths_ordered: Vec<_> = local.keys().map(|path| path.as_str()).collect();
     local_paths_ordered
@@ -78,24 +78,23 @@ pub fn plan_sync<'a>(
         let physical_path = local.get(remote_path).unwrap();
         if let Some(on_remote) = remote_content.get(remote_path) {
             job.push(SyncPlan::Replace {
-                local: physical_path,
-                remote: remote_path,
-                remote_checksum: on_remote
-                    .checksum
-                    .as_ref()
-                    .map(|checksum| checksum.as_slice()),
+                local: physical_path.to_owned(),
+                remote: remote_path.to_owned(),
+                remote_checksum: on_remote.checksum,
             });
         } else {
             job.push(SyncPlan::Put {
-                local: physical_path,
-                remote: remote_path,
+                local: physical_path.to_owned(),
+                remote: remote_path.to_owned(),
             });
         }
     }
     job.extend(
         must_remove(local, remote_content, ignore)
             .into_iter()
-            .map(|remote| SyncPlan::Delete { remote }),
+            .map(|remote| SyncPlan::Delete {
+                remote: remote.to_owned(),
+            }),
     );
     job
 }
@@ -120,8 +119,8 @@ where
         } => {
             let content = read(local)?;
             let mime_type = infer::get_from_path(local)?.map(|t| t.mime_type());
-            let digest = Sha256::digest(&content);
-            if &Some(digest.as_slice()) != remote_checksum {
+            let digest: [u8; 32] = Sha256::digest(&content).into();
+            if &Some(digest) != remote_checksum {
                 Ok(Execution {
                     remote,
                     action: SyncAction::Put { content, mime_type },
@@ -151,14 +150,13 @@ mod tests {
     #[test]
     fn replaces_when_checksum_mismatch() {
         let content_remote = "hei";
-        let remote_checksum: [u8; 32] = Sha256::digest(content_remote.as_bytes())
-            .into();
+        let remote_checksum: [u8; 32] = Sha256::digest(content_remote.as_bytes()).into();
         let local_content = "hallois";
         let local = PathBuf::new().join("README.md");
         let plan = SyncPlan::Replace {
-            local: &local,
-            remote: "remote",
-            remote_checksum: Some(remote_checksum.as_slice()),
+            local: local,
+            remote: "remote".to_string(),
+            remote_checksum: Some(remote_checksum),
         };
         let Execution { remote: _, action } =
             plan_execution(&plan, |_| Ok(local_content.as_bytes().to_vec())).unwrap();
@@ -174,14 +172,13 @@ mod tests {
     #[test]
     fn ignores_when_checksum_match() {
         let content_remote = "hei";
-        let remote_checksum: [u8; 32] = Sha256::digest(content_remote.as_bytes())
-            .into();
+        let remote_checksum: [u8; 32] = Sha256::digest(content_remote.as_bytes()).into();
         let local_content = "hei";
         let local = PathBuf::new().join("README.md");
         let plan = SyncPlan::Replace {
-            local: &local,
-            remote: "remote",
-            remote_checksum: Some(remote_checksum.as_slice()),
+            local: local,
+            remote: "remote".to_string(),
+            remote_checksum: Some(remote_checksum),
         };
         let Execution { remote: _, action } =
             plan_execution(&plan, |_| Ok(local_content.as_bytes().to_vec())).unwrap();
@@ -197,7 +194,7 @@ mod tests {
         assert_eq!(
             job,
             vec![SyncPlan::Delete {
-                remote: "subfolder/index.html"
+                remote: "subfolder/index.html".to_string()
             }]
         );
     }
@@ -215,7 +212,7 @@ mod tests {
         assert_eq!(
             job,
             vec![SyncPlan::Delete {
-                remote: "subfolder/index.html"
+                remote: "subfolder/index.html".to_string()
             }]
         );
     }
@@ -229,8 +226,8 @@ mod tests {
         assert_eq!(
             job,
             vec![SyncPlan::Put {
-                remote: "subfolder/index.html",
-                local: &PathBuf::new()
+                remote: "subfolder/index.html".to_string(),
+                local: PathBuf::new()
             }]
         );
     }
@@ -245,8 +242,8 @@ mod tests {
         assert_eq!(
             job,
             vec![SyncPlan::Replace {
-                remote: "subfolder/index.html",
-                local: &PathBuf::new(),
+                remote: "subfolder/index.html".to_string(),
+                local: PathBuf::new(),
                 remote_checksum: None
             }]
         );
@@ -276,8 +273,8 @@ mod tests {
         let local_content = "content";
         let local = PathBuf::new().join("README.md");
         let plan = SyncPlan::Replace {
-            local: &local,
-            remote: "remote",
+            local: local,
+            remote: "remote".to_string(),
             remote_checksum: None,
         };
         let execution = plan_execution(&plan, |_| Ok(local_content.as_bytes().to_vec())).unwrap();

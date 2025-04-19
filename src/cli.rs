@@ -89,4 +89,7 @@ pub struct SyncArgs {
     pub ignore: Vec<String>,
     #[arg(short, long, default_value_t = false)]
     pub verbose: bool,
+    /// Use this many concurrent threads when listing files and syncing
+    #[arg(short, long)]
+    pub concurrency: Option<usize>,
 }

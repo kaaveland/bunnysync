@@ -6,45 +6,84 @@ use chrono::Local;
 use clap::{CommandFactory, Parser};
 use clap_complete::Shell::{Bash, Elvish, Fish, PowerShell, Zsh};
 use clap_complete::generate;
+use crossbeam::channel::unbounded;
 use fxhash::FxHashMap;
-use std::{env, fs, io};
+use std::{env, fs, io, thread};
 
 mod api;
 mod cli;
 mod local_path;
 mod planning;
 
+fn execute_job(
+    client: &StorageZoneClient,
+    job: SyncPlan,
+    dry_run: bool,
+    lockfile: &str,
+) -> anyhow::Result<(String, &'static str)> {
+    let Execution { remote, action } = plan_execution(&job, fs::read)?;
+
+    let event = match &action {
+        SyncAction::Put { .. } => "put",
+        SyncAction::Ignore => "unchanged",
+        SyncAction::Delete => "delete",
+    };
+    if !dry_run {
+        match action {
+            SyncAction::Put { content, mime_type } => {
+                client.put_file(remote, content, mime_type)?;
+            }
+            SyncAction::Delete if remote != lockfile => {
+                client.delete_file(remote)?;
+            }
+            _ => {}
+        }
+    }
+
+    Ok((remote.to_string(), event))
+}
+
 fn execute_sync(
     verbose: bool,
     dry_run: bool,
-    job: &[SyncPlan],
+    job: Vec<SyncPlan>,
     client: &StorageZoneClient,
-    lockfile: &str
+    lockfile: &str,
+    concurrency: usize,
 ) -> anyhow::Result<()> {
-    // TODO: Consider introducing concurrency in this loop, the rate limit is generous
-    for action in job {
-        let Execution { remote, action } = plan_execution(action, fs::read)?;
-        if verbose || dry_run {
-            let event = match &action {
-                SyncAction::Put { .. } => "put",
-                SyncAction::Ignore => "unchanged",
-                SyncAction::Delete => "delete",
-            };
-            println!("{remote}: {event}");
+    let (send_work, receive_work) = unbounded();
+    let (send_result, receive_result) = unbounded();
+    let expected = job.len();
+
+    thread::scope(move |scope| {
+        for action in job {
+            send_work.send(action)?;
         }
-        if !dry_run {
-            match action {
-                SyncAction::Put { content, mime_type } => {
-                    client.put_file(remote, content, mime_type)?;
+
+        for _ in 0..concurrency {
+            let receive_work = receive_work.clone();
+            let send_result = send_result.clone();
+
+            scope.spawn(move || {
+                while let Ok(action) = receive_work.recv() {
+                    let r = execute_job(client, action, dry_run, lockfile);
+                    send_result.send(r)?;
                 }
-                SyncAction::Delete if remote != lockfile => {
-                    client.delete_file(remote)?;
-                }
-                _ => {}
+                Ok::<(), anyhow::Error>(())
+            });
+        }
+
+        for _ in 0..expected {
+            let (remote, event) = receive_result.recv()??;
+            if verbose || dry_run {
+                println!("{remote}: {event}");
             }
         }
-    }
-    Ok(())
+
+        drop(send_work);
+
+        Ok::<_, anyhow::Error>(())
+    })
 }
 
 fn take_lock(client: &StorageZoneClient, lockfile: &str, force: bool) -> anyhow::Result<()> {
@@ -109,7 +148,10 @@ fn do_sync(args: SyncArgs) -> anyhow::Result<()> {
         lockfile,
         ignore,
         verbose,
+        concurrency,
     } = args;
+
+    let concurrency = concurrency.unwrap_or_else(num_cpus::get);
 
     let SyncJob {
         client,
@@ -120,10 +162,16 @@ fn do_sync(args: SyncArgs) -> anyhow::Result<()> {
         take_lock(&client, lockfile.as_str(), force)?;
     }
     let local = local_path::files_by_remote_name(local_path.as_str(), path.as_str())?;
-    // TODO: Consider introducing concurrency in this, it seems listing files is slow
-    let remote = client.list_files(path.as_str(), &ignore)?;
+    let remote = client.list_files(path.as_str(), &ignore, concurrency)?;
     let job = plan_sync(&local, &remote, &ignore);
-    execute_sync(verbose, dry_run, &job, &client, lockfile.as_str())?;
+    execute_sync(
+        verbose,
+        dry_run,
+        job,
+        &client,
+        lockfile.as_str(),
+        concurrency,
+    )?;
     if !dry_run {
         remove_lock(&client, lockfile.as_str())?;
     }
