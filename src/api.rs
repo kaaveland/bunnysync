@@ -1,6 +1,6 @@
+use std::thread;
 use anyhow::anyhow;
 use crossbeam::channel::unbounded;
-use crossbeam::thread;
 use fxhash::FxHashMap;
 use reqwest::blocking::Client;
 use serde::Deserialize;
@@ -74,7 +74,7 @@ impl StorageZoneClient {
 
         post_work.send(path.to_string())?;
 
-        let r = thread::scope(|scope| {
+        thread::scope(|scope| {
             let mut files = vec![];
 
             // Spawn workers
@@ -82,7 +82,7 @@ impl StorageZoneClient {
             for _ in 0..concurrency {
                 let receive_work = receive_work.clone();
                 let send_result = post_result.clone();
-                workers.push(scope.spawn(move |_| {
+                workers.push(scope.spawn(move || {
                     while let Ok(path) = receive_work.recv() {
                         send_result.send(self.ls_dir(path.as_str()))?;
                     }
@@ -120,12 +120,7 @@ impl StorageZoneClient {
             // Close channel to shut down workers
             drop(post_work);
             Ok::<Vec<_>, anyhow::Error>(files)
-        });
-
-        match r {
-            Ok(v) => Ok(v?),
-            Err(e) => Err(anyhow!("Thread err: {e:?}")),
-        }
+        })
     }
 
     pub fn list_files(
