@@ -23,9 +23,11 @@ mise use ubi:kaaveland/thumper@latest
 
 This downloads the latest release for your platform from the [releases](https://github.com/kaaveland/thumper/releases) page, which you can also do manually.
 
+There's a docker image available at [ghcr](https://ghcr.io/kaaveland/thumper).
+
 It is also possible to install `thumper` with `cargo install thumper`.
 
-The project is available under the MIT License and the repository is at [GitHub](https://github.com/kaaveland/thumper).
+The code is available under the MIT License and the repository is at [GitHub](https://github.com/kaaveland/thumper).
 
 ## Usage
 

@@ -115,3 +115,34 @@ jobs:
         run: |
           version="$(cargo read-manifest --manifest-path Cargo.toml | jq -r .version)"
           gh release edit "$version" --draft=false
+
+  build_images:
+    name: Build multiplatform image for ghcr.io
+    needs:
+      - publish_release
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch release artifacts for linux/arm64 and linux/amd64
+        run: |
+          version="$(cargo read-manifest --manifest-path Cargo.toml | jq -r .version)"
+          gh release download "$version"
+          cp thumper-x86_64-unknown-linux-musl thumper-amd64
+          cp thumper-aarch64-unknown-linux-musl thumper-arm64
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build docker image
+        run: |
+          version="$(cargo read-manifest --manifest-path Cargo.toml | jq -r .version)"
+          docker buildx create --use
+          docker buildx build . \
+            --platform "linux/amd64,linux/arm64" \
+            -t ghcr.io/${{ github.repository }}:latest \
+            -t ghcr.io/${{ github.repository }}:$version \
+            --push
