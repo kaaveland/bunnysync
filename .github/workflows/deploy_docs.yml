@@ -1,0 +1,26 @@
+name: Deploy documentation
+
+on:
+  push:
+    tags:
+      - '*.*.*'
+  workflow_dispatch: {}
+
+jobs:
+  deploy_docs:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: jdx/mise-action@v2
+    - name: Render CLI help
+      run: cargo test
+    - name: Render mdbook
+      run: mdbook build docs
+    - name: Deploy docs to kaveland/thumper
+      run: thumper sync docs/book kaveland --path thumper --concurrency 4 --verbose
+      env:
+        THUMPER_KEY: ${{ secrets.THUMPER_KEY }}
+    - name: Purge pull zone
+      run: thumper purge-zone 3644443
+      env:
+        THUMPER_API_KEY: ${{ secrets.THUMPER_API_KEY }}

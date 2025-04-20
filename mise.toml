@@ -1,0 +1,4 @@
+[tools]
+
+"ubi:rust-lang/mdbook" = "v0.4.48"
+"ubi:kaaveland/thumper" = "latest"

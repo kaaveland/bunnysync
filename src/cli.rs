@@ -93,3 +93,33 @@ pub struct SyncArgs {
     #[arg(short, long)]
     pub concurrency: Option<usize>,
 }
+
+#[cfg(test)]
+mod tests {
+    use std::fs;
+    use clap::CommandFactory;
+    use crate::cli::Cli;
+
+    #[test]
+    fn render_help() {
+        let mut cli = Cli::command();
+        let help = cli.render_help().to_string();
+        fs::write(
+            "docs/src/help", help
+        ).unwrap();
+    }
+
+    #[test]
+    fn render_sync_help() {
+        let mut cli = Cli::command();
+        for subcommand in cli.get_subcommands_mut() {
+            if subcommand.get_name() == "sync" {
+                let help = subcommand.render_help().to_string()
+                    .replacen("sync", "thumper sync", 1);
+                fs::write(
+                    "docs/src/synchelp", help
+                ).unwrap();
+            }
+        }
+    }
+}

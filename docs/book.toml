@@ -1,0 +1,15 @@
+[book]
+authors = ["Robin Kåveland"]
+language = "en"
+multilingual = false
+src = "src"
+title = "thumper"
+description = "thumper is a cli tool for deploying assets to Bunny CDN"
+
+[output.html]
+site-url = "/thumper"
+git-repository-url = "https://github.com/kaaveland/thumper"
+
+[output.html.fold]
+enable = true
+level = 1

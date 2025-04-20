@@ -9,6 +9,7 @@ authors = [
 description = "Sync static files to BunnyCDN"
 homepage = "https://github.com/kaaveland/thumper"
 repository = "https://github.com/kaaveland/thumper.git"
+categories = ["command-line-interface"]
 
 [dependencies]
 anyhow = "1.0.98"
