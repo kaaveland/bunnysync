@@ -17,58 +17,7 @@ I made this tool to facilitate quick and easy sync from multiple repositories/st
 
 ## Usage
 
-`thumper` can authenticate using the password to a storage zone, find it in FTP & API Access in the dashboard, under your storage zone. The password can be passed in the `thumper_KEY` environment variable, or on the command line with `--access-key`.
-
-Place each file from the local `~/projects/blog/public` folder into the root of the storage zone named `eugene-docs`:
-
-```shell
-thumper sync ~/projects/blog/public eugene-docs
-```
-
-Place each file from the local `~/projects/eugene/eugene/docs/book` folder into the eugene/ folder on the storage zone named `eugene-docs`:
-
-```shell
-thumper sync ~/projects/blog/public eugene-docs --path eugene
-```
-
-Place each file from the local `~/projects/blog/public` folder into the root of the storage zone named `eugene-docs` but do not delete anything under `eugene/`:
-
-```shell
-thumper sync ~/projects/blog/public eugene-docs --ignore eugene
-```
-
-For more, see `thumper --help`:
-
-```
-thumper is a tool for synchronizing files to bunny cdn storage zones
-
-thumper can sync to subtrees of your storage zone, the entire storage zone, or selectively skip
-parts of the tree. It can easily deploy a static site with a single command.
-
-thumper refuses to sync if it looks like there's already an active sync job to the storage
-zone. It places a lockfile into the storage zone during the sync to have rudimentary concurrency
-control.
-
-thumper aims to make the local_path and the path within the storage zone exactly equal. It will sync
-HTML at the end, to ensure other assets like CSS are already updated by the time they sync.
-
-Usage: thumper <COMMAND>
-
-Commands:
-  sync         Sync a local folder to a path within a bunny.net Storage Zone
-  completions  Provide shell completions
-  purge-url    Purge a URL from the bunny.net cache
-  purge-zone   Purge an entire pull zone from bunny.net cache
-  help         Print this message or the help of the given subcommand(s)
-
-Options:
-  -h, --help
-          Print help (see a summary with '-h')
-
-  -V, --version
-          Print version
-
-```
+The [documentation](https://kaveland.no/thumper/) has a guide for configuring a storage zone and setting up GitHub Workflows to deploy a static site.
 
 ## Development
 
