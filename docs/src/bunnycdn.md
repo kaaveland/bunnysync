@@ -27,7 +27,7 @@ The first few steps in the `deploy_docs` job are all about producing the static 
 
 The `thumper sync` command uses `--path thumper` to place the static site at `thumper/` in the storage zone. This is not necessary if you want to sync your site to the root of the storage zone instead, but this documentation site shares the domain with a few others. You may have to provide `--endpoint` to `thumper sync`. 
 
-Purging the cache with `thumper purge-zone` is optional. You can force a cache-refresh immediately with this approach, making your new content available faster. This enables you to set a very high Cache Expiration Time. You can also use `thumper purge-url` with a `*` wildcard at the end of your URL, to purge only parts of your page.
+Purging the cache with `thumper purge-zone` is optional. This command takes the ID of your pull zone as an argument—it is the numeric part of the URL to the pull zone page. You can force a cache-refresh immediately with this approach, making your new content available faster. This enables you to set a very high Cache Expiration Time. You can also use `thumper purge-url` with a `*` wildcard at the end of your URL, to purge only parts of your page.
 
 ## Setting up a BunnyCDN Pull Zone
 

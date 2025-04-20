@@ -25,6 +25,8 @@ This downloads the latest release for your platform from the [releases](https://
 
 It is also possible to install `thumper` with `cargo install thumper`.
 
+The project is available under the MIT License and the repository is at [GitHub](https://github.com/kaaveland/thumper).
+
 ## Usage
 
 `thumper` needs to authenticate to `BunnyCDN` in order to work. The recommended approach is to make two environment variables available:
