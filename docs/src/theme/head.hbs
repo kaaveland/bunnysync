@@ -1,0 +1,8 @@
+<!-- Silly hack to fix non-loading assets at /thumper -->
+<script type="application/javascript">
+    if (window.location.pathname === '/thumper') {
+        window.location.pathname = '/thumper/';
+    }
+</script>
+<!-- plausible.io is a privacy-friendly analytics, we want to count visitors to pages -->
+<script defer data-domain="kaveland.no" src="https://plausible.io/js/script.js"></script>
