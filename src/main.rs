@@ -125,8 +125,8 @@ fn init_sync(
     endpoint: String,
 ) -> anyhow::Result<SyncJob> {
     let access_key = access_key
-        .or_else(|| env::var("BUNNYSYNC_KEY").ok())
-        .context("No API key provided with --access-key or BUNNYSYNC_KEY")?;
+        .or_else(|| env::var("THUMPER_KEY").ok())
+        .context("No API key provided with --access-key or THUMPER_KEY")?;
     let client = StorageZoneClient::new(access_key, endpoint, storage_zone);
 
     Ok(SyncJob {
@@ -180,8 +180,8 @@ fn do_sync(args: SyncArgs) -> anyhow::Result<()> {
 
 fn use_api_key(api_key: Option<String>) -> anyhow::Result<String> {
     api_key
-        .or_else(|| env::var("BUNNYSYNC_API_KEY").ok())
-        .context("No API key provided with --api-key or BUNNYSYNC_API_KEY")
+        .or_else(|| env::var("THUMPER_API_KEY").ok())
+        .context("No API key provided with --api-key or thumper_API_KEY")
 }
 
 fn main() -> anyhow::Result<()> {
@@ -199,7 +199,7 @@ fn main() -> anyhow::Result<()> {
                 _ => Err(anyhow!("Unsupported shell: {shell}")),
             }?;
             let mut com = Cli::command();
-            generate(sh, &mut com, "bunnysync", &mut io::stdout());
+            generate(sh, &mut com, "thumper", &mut io::stdout());
             Ok(())
         }
         Action::PurgeUrl { url, api_key } => {

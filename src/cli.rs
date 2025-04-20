@@ -17,7 +17,7 @@ pub enum Action {
         /// URL to purge, wildcard * is allowed at the end
         #[arg(name = "url")]
         url: String,
-        /// API key for bunny CDN --  looked up in environment variable BUNNYSYNC_API_KEY if not present
+        /// API key for bunny CDN --  looked up in environment variable THUMPER_API_KEY if not present
         #[arg(short, long)]
         api_key: Option<String>,
     },
@@ -26,7 +26,7 @@ pub enum Action {
         /// Numeric ID of pull zone to purge
         #[arg(name = "pullzone")]
         pullzone: u64,
-        /// API key for bunny CDN --  looked up in environment variable BUNNYSYNC_API_KEY if not present
+        /// API key for bunny CDN --  looked up in environment variable THUMPER_API_KEY if not present
         #[arg(short, long)]
         api_key: Option<String>,
         /// Optional Cache Tag to target
@@ -36,21 +36,21 @@ pub enum Action {
 }
 
 #[derive(Parser)]
-#[command(name = "bunnysync")]
+#[command(name = "thumper")]
 #[command(arg_required_else_help = true)]
 #[command(about = "Sync your files to bunny cdn storage zone")]
 #[command(version = env!("CARGO_PKG_VERSION"))]
 #[command(
-    long_about = "bunnysync is a tool for synchronizing files to bunny cdn storage zones
+    long_about = "thumper is a tool for synchronizing files to bunny cdn storage zones
 
-bunnysync can sync to subtrees of your storage zone, the entire storage zone, or selectively skip
+thumper can sync to subtrees of your storage zone, the entire storage zone, or selectively skip
 parts of the tree. It can easily deploy a static site with a single command.
 
-bunnysync refuses to sync if it looks like there's already an active sync job to the storage
+thumper refuses to sync if it looks like there's already an active sync job to the storage
 zone. It places a lockfile into the storage zone during the sync to have rudimentary concurrency
 control.
 
-bunnysync aims to make the local_path and the path within the storage zone exactly equal. It will sync
+thumper aims to make the local_path and the path within the storage zone exactly equal. It will sync
 HTML at the end, to ensure other assets like CSS are already updated by the time they sync."
 )]
 pub struct Cli {
@@ -63,7 +63,7 @@ pub struct SyncArgs {
     /// Which bunny cdn endpoint to use
     #[arg(short, long, default_value = "storage.bunnycdn.com")]
     pub endpoint: String,
-    /// Password for the storage zone - looked up in environment variable BUNNYSYNC_KEY if not present
+    /// Password for the storage zone - looked up in environment variable THUMPER_KEY if not present
     #[arg(short, long)]
     pub access_key: Option<String>,
     /// Local directory to put in the storage zone
@@ -81,8 +81,8 @@ pub struct SyncArgs {
     /// Force a sync despite a hanging lock file
     #[arg(short, long, default_value_t = false)]
     pub force: bool,
-    /// Filename to use for the lockfile. bunnysync will not sync if this file exists in the destination.
-    #[arg(long, default_value = ".bunnysync.lock")]
+    /// Filename to use for the lockfile. thumper will not sync if this file exists in the destination.
+    #[arg(long, default_value = ".thumper.lock")]
     pub lockfile: String,
     /// Do not delete anything in the storage zone paths that start with this prefix (can pass multiple times)
     #[arg(short, long)]

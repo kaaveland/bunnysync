@@ -1,5 +1,5 @@
 [package]
-name = "bunnysync"
+name = "thumper"
 version = "0.1.0"
 edition = "2024"
 license = "MIT"
@@ -7,8 +7,8 @@ authors = [
     "Robin Kåveland <robin@kaveland.no>"
 ]
 description = "Sync static files to BunnyCDN"
-homepage = "https://github.com/kaaveland/bunnysync"
-repository = "https://github.com/kaaveland/bunnysync.git"
+homepage = "https://github.com/kaaveland/thumper"
+repository = "https://github.com/kaaveland/thumper.git"
 
 [dependencies]
 anyhow = "1.0.98"

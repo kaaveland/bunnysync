@@ -1,7 +1,7 @@
 Syncing files to BunnyCDN
 ==
 
-`bunnysync` is a self-contained binary that can place files from a local folder into a folder in a BunnyCDN Storage Zone.
+`thumper` is a self-contained binary that can place files from a local folder into a folder in a BunnyCDN Storage Zone.
 
 I made this tool to facilitate quick and easy sync from multiple repositories/static sites that I run, into the same BunnyCDN Storage Zone. It is written in Rust to make use of the excellent [ubi](https://github.com/houseabsolute/ubi) installer, so that I can easily install it on all the machines and systems I use with [mise](https://mise.jdx.dev/).
 
@@ -17,42 +17,42 @@ I made this tool to facilitate quick and easy sync from multiple repositories/st
 
 ## Usage
 
-`bunnysync` can authenticate using the password to a storage zone, find it in FTP & API Access in the dashboard, under your storage zone. The password can be passed in the `BUNNYSYNC_KEY` environment variable, or on the command line with `--access-key`.
+`thumper` can authenticate using the password to a storage zone, find it in FTP & API Access in the dashboard, under your storage zone. The password can be passed in the `thumper_KEY` environment variable, or on the command line with `--access-key`.
 
 Place each file from the local `~/projects/blog/public` folder into the root of the storage zone named `eugene-docs`:
 
 ```shell
-bunnysync sync ~/projects/blog/public eugene-docs
+thumper sync ~/projects/blog/public eugene-docs
 ```
 
 Place each file from the local `~/projects/eugene/eugene/docs/book` folder into the eugene/ folder on the storage zone named `eugene-docs`:
 
 ```shell
-bunnysync sync ~/projects/blog/public eugene-docs --path eugene
+thumper sync ~/projects/blog/public eugene-docs --path eugene
 ```
 
 Place each file from the local `~/projects/blog/public` folder into the root of the storage zone named `eugene-docs` but do not delete anything under `eugene/`:
 
 ```shell
-bunnysync sync ~/projects/blog/public eugene-docs --ignore eugene
+thumper sync ~/projects/blog/public eugene-docs --ignore eugene
 ```
 
-For more, see `bunnysync --help`:
+For more, see `thumper --help`:
 
 ```
-bunnysync is a tool for synchronizing files to bunny cdn storage zones
+thumper is a tool for synchronizing files to bunny cdn storage zones
 
-bunnysync can sync to subtrees of your storage zone, the entire storage zone, or selectively skip
+thumper can sync to subtrees of your storage zone, the entire storage zone, or selectively skip
 parts of the tree. It can easily deploy a static site with a single command.
 
-bunnysync refuses to sync if it looks like there's already an active sync job to the storage
+thumper refuses to sync if it looks like there's already an active sync job to the storage
 zone. It places a lockfile into the storage zone during the sync to have rudimentary concurrency
 control.
 
-bunnysync aims to make the local_path and the path within the storage zone exactly equal. It will sync
+thumper aims to make the local_path and the path within the storage zone exactly equal. It will sync
 HTML at the end, to ensure other assets like CSS are already updated by the time they sync.
 
-Usage: bunnysync <COMMAND>
+Usage: thumper <COMMAND>
 
 Commands:
   sync         Sync a local folder to a path within a bunny.net Storage Zone
@@ -91,7 +91,7 @@ cargo clippy && cargo check
 
 ## Contributions & License
 
-bunnysync is available under the MIT license, and contributions are welcome. Feel free to open an issue so we can have discussion before adding new code.
+thumper is available under the MIT license, and contributions are welcome. Feel free to open an issue so we can have discussion before adding new code.
 
 ## Planned work
 

@@ -137,26 +137,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1628fb46dfa0b37568d12e5edd512553eccf6a22a78e8bde00bb4aed84d5bdbf"
 
 [[package]]
-name = "bunnysync"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "chrono",
- "clap",
- "clap_complete",
- "crossbeam",
- "fxhash",
- "hex",
- "infer",
- "num_cpus",
- "reqwest",
- "serde",
- "serde_json",
- "sha2",
- "urlencoding",
-]
-
-[[package]]
 name = "byteorder"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1299,6 +1279,26 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "thumper"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "clap",
+ "clap_complete",
+ "crossbeam",
+ "fxhash",
+ "hex",
+ "infer",
+ "num_cpus",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "sha2",
+ "urlencoding",
 ]
 
 [[package]]
